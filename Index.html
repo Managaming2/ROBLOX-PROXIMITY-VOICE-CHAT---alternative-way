@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>RoLink Mobile - Chat Vocal Roblox</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #0b0e14; color: #f1f5f9; font-family: system-ui, -apple-system, sans-serif; }
+    .speaking-ring { box-shadow: 0 0 0 3px #10b981, 0 0 15px rgba(16, 185, 129, 0.5); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 max-w-md mx-auto">
+
+  <!-- En-tête Mobile -->
+  <header class="flex items-center justify-between py-3 border-b border-slate-800">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center font-black text-slate-950">R</div>
+      <div>
+        <h1 class="font-bold text-base leading-tight">RoLink <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full ml-1">MOBILE</span></h1>
+        <p class="text-[11px] text-slate-400">Connexion manuelle par pseudo</p>
+      </div>
+    </div>
+    <button id="btnSettings" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">⚙️</button>
+  </header>
+
+  <!-- Écran 1 : Connexion Mobile -->
+  <main id="loginScreen" class="my-auto space-y-4 py-6">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+      <div class="text-center space-y-1">
+        <span class="inline-block text-xs font-semibold uppercase tracking-wider text-blue-400 bg-blue-950/60 px-3 py-1 rounded-full">Mode Mobile (Web)</span>
+        <h2 class="text-xl font-bold">Rejoindre ton serveur</h2>
+        <p class="text-xs text-slate-400">Entre ton pseudo Roblox exact pour retrouver ta partie.</p>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Pseudo Roblox</label>
+          <input id="usernameInput" type="text" placeholder="Ex: Builderman" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Code Serveur / JobId (optionnel)</label>
+          <input id="serverInput" type="text" placeholder="Auto-détection via API ou code..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500" />
+        </div>
+      </div>
+
+      <button id="joinBtn" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3.5 rounded-xl transition">
+        Activer le micro & Rejoindre
+      </button>
+    </div>
+  </main>
+
+  <!-- Écran 2 : Salon Vocal Actif -->
+  <main id="roomScreen" class="hidden flex-1 py-4 space-y-4 overflow-y-auto">
+    <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+      <div>
+        <div class="text-[11px] text-emerald-400 font-semibold">● CONNECTÉ (MOBILE)</div>
+        <div id="roomTitle" class="text-sm font-bold text-white">Serveur #RBX-8492</div>
+      </div>
+      <button id="leaveBtn" class="text-xs bg-rose-500/20 text-rose-400 px-3 py-1.5 rounded-lg font-semibold">Quitter</button>
+    </div>
+
+    <!-- Vumètre Micro -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2">
+      <div class="flex justify-between text-xs text-slate-400">
+        <span>Niveau du microphone</span>
+        <span id="micStatusText" class="text-emerald-400">Actif</span>
+      </div>
+      <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden">
+        <div id="micBar" class="h-full bg-emerald-500 w-0 transition-all duration-75"></div>
+      </div>
+    </div>
+
+    <!-- Liste des joueurs dans le serveur -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Joueurs sur ce serveur (3)</h3>
+      <div id="playersList" class="space-y-2"></div>
+    </div>
+  </main>
+
+  <!-- Barre de contrôle bas (Mobile) -->
+  <footer id="controlsBar" class="hidden pt-3 border-t border-slate-800 grid grid-cols-3 gap-2">
+    <button id="muteBtn" class="bg-slate-800 py-3 rounded-xl font-semibold text-sm flex flex-col items-center">
+      <span>🎙️</span><span class="text-xs mt-1">Micro</span>
+    </button>
+    <button id="pttBtn" class="bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 py-3 rounded-xl font-semibold text-sm flex flex-col items-center select-none">
+      <span>👆</span><span class="text-xs mt-1">Maintenir (PTT)</span>
+    </button>
+    <button id="deafenBtn" class="bg-slate-800 py-3 rounded-xl font-semibold text-sm flex flex-col items-center">
+      <span>🎧</span><span class="text-xs mt-1">Sourdine</span>
+    </button>
+  </footer>
+
+  <!-- Modale Paramètres -->
+  <div id="settingsModal" class="hidden fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-5 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h2 class="font-bold text-base">Paramètres Audio (Mobile)</h2>
+        <button id="closeSettings" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <div class="space-y-3 text-sm">
+        <div>
+          <label class="flex justify-between text-xs text-slate-300 mb-1">
+            <span>Volume du micro</span><span id="gainVal">100%</span>
+          </label>
+          <input id="gainSlider" type="range" min="0" max="200" value="100" class="w-full accent-emerald-500" />
+        </div>
+        <div>
+          <label class="flex justify-between text-xs text-slate-300 mb-1">
+            <span>Portée vocale (Studs)</span><span id="distVal">50 studs</span>
+          </label>
+          <input id="distSlider" type="range" min="10" max="150" value="50" class="w-full accent-emerald-500" />
+        </div>
+        <label class="flex items-center justify-between pt-2">
+          <span class="text-xs text-slate-300">Mode Appuyer-pour-parler (PTT)</span>
+          <input id="pttToggle" type="checkbox" class="accent-emerald-500 w-4 h-4" />
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let audioCtx, analyser, gainNode, micStream;
+    let isMuted = false, isDeafened = false, pttMode = false, pttPressed = false;
+    let currentUser = "";
+
+    const players = [
+      { name: "Alex_BloxFR", platform: "PC", distance: 12, speaking: true },
+      { name: "Kira_Gaming", platform: "Mobile", distance: 28, speaking: false }
+    ];
+
+    document.getElementById("joinBtn").onclick = async () => {
+      const name = document.getElementById("usernameInput").value.trim();
+      if (!name) return alert("Entre ton pseudo Roblox !");
+      currentUser = name;
+      const srv = document.getElementById("serverInput").value.trim() || "RBX-" + Math.floor(1000 + Math.random() * 9000);
+      document.getElementById("roomTitle").textContent = "Serveur #" + srv;
+
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioCtx = new AudioContext();
+        const src = audioCtx.createMediaStreamSource(micStream);
+        gainNode = audioCtx.createGain();
+        analyser = audioCtx.createAnalyser();
+        src.connect(gainNode);
+        gainNode.connect(analyser);
+        monitorMic();
+      } catch (e) {
+        alert("Micro refusé ou indisponible. Mode écoute seul activé.");
+      }
+
+      document.getElementById("loginScreen").classList.add("hidden");
+      document.getElementById("roomScreen").classList.remove("hidden");
+      document.getElementById("controlsBar").classList.remove("hidden");
+      renderPlayers(false);
+    };
+
+    function monitorMic() {
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      function loop() {
+        if (!analyser) return;
+        analyser.getByteFrequencyData(data);
+        const avg = data.reduce((a, b) => a + b, 0) / data.length;
+        const canTalk = !isMuted && !isDeafened && (!pttMode || pttPressed);
+        const level = canTalk ? Math.min(100, avg * 2.5) : 0;
+        document.getElementById("micBar").style.width = level + "%";
+        renderPlayers(level > 15);
+        requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    function renderPlayers(selfSpeaking) {
+      const list = document.getElementById("playersList");
+      const all = [{ name: currentUser + " (Toi)", platform: "Mobile", distance: 0, speaking: selfSpeaking }, ...players];
+      list.innerHTML = all.map(p => `
+        <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center font-bold text-sm ${p.speaking ? 'speaking-ring' : ''}">
+              ${p.name[0].toUpperCase()}
+            </div>
+            <div>
+              <div class="text-sm font-semibold">${p.name}</div>
+              <div class="text-[11px] text-slate-400">Appareil : ${p.platform} • ${p.distance} studs</div>
+            </div>
+          </div>
+          <span class="text-xs ${p.speaking ? 'text-emerald-400 font-bold' : 'text-slate-600'}">
+            ${p.speaking ? '🔊 Parle' : '🔈'}
+          </span>
+        </div>
+      `).join("");
+    }
+
+    // Contrôles & Paramètres
+    document.getElementById("muteBtn").onclick = (e) => {
+      isMuted = !isMuted;
+      e.currentTarget.classList.toggle("bg-rose-600", isMuted);
+    };
+    document.getElementById("deafenBtn").onclick = (e) => {
+      isDeafened = !isDeafened;
+      e.currentTarget.classList.toggle("bg-rose-600", isDeafened);
+    };
+    const pttBtn = document.getElementById("pttBtn");
+    pttBtn.onpointerdown = () => pttPressed = true;
+    pttBtn.onpointerup = () => pttPressed = false;
+
+    document.getElementById("btnSettings").onclick = () => document.getElementById("settingsModal").classList.remove("hidden");
+    document.getElementById("closeSettings").onclick = () => document.getElementById("settingsModal").classList.add("hidden");
+    document.getElementById("gainSlider").oninput = (e) => {
+      document.getElementById("gainVal").textContent = e.target.value + "%";
+      if (gainNode) gainNode.gain.value = e.target.value / 100;
+    };
+    document.getElementById("distSlider").oninput = (e) => document.getElementById("distVal").textContent = e.target.value + " studs";
+    document.getElementById("pttToggle").onchange = (e) => pttMode = e.target.checked;
+    document.getElementById("leaveBtn").onclick = () => location.reload();
+  </script>
+</body>
+</html>
